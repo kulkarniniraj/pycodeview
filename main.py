@@ -5,40 +5,15 @@ from PySide6.QtWidgets import QListWidget, QListWidgetItem
 from pathlib import Path
 
 import astparser
-
-def get_class_list_w():
-    lst = ['QTClass', 'GTKClass', 'Terminal']
-    w = QtWidgets.QListWidget()
-    for f in lst:
-        i = QtWidgets.QListWidgetItem(f, w)
-
-    return w
-
-def get_func_list_w():
-    lst = ['__init__', 'func1', 'func2']
-    w = QtWidgets.QListWidget()
-    for f in lst:
-        i = QtWidgets.QListWidgetItem(f, w)
-
-    return w
-
-def get_code(file_path: Path):
-    with open(file_path) as f:
-        return f.read()
+import symbol_tree
 
 class MyWidget(QtWidgets.QWidget):
-    def set_list_view(self, lst_view: QListWidget, lst_item):
-        lst_view.clear()
-        i = QtWidgets.QListWidgetItem('.', lst_view)
-        for item in lst_item:
-            i = QtWidgets.QListWidgetItem(str(item), lst_view)
-        return lst_view
-
     def __init__(self, root):
         super().__init__()
 
         self.root = Path(root)
 
+        # list views
         self.file_lst_w = QtWidgets.QListWidget()
         self.file_lst_w.currentItemChanged.connect(self.file_changed)
 
@@ -55,6 +30,7 @@ class MyWidget(QtWidgets.QWidget):
         self.hbox.addWidget(self.class_lst_w)
         self.hbox.addWidget(self.func_lst_w)
 
+        # search bar and code viewer
         self.code_text = QtWidgets.QTextEdit('')
 
         self.layout = QtWidgets.QVBoxLayout(self)
@@ -62,51 +38,34 @@ class MyWidget(QtWidgets.QWidget):
         self.layout.addWidget(QtWidgets.QLineEdit(placeholderText = 'Search Term'), 2)
         self.layout.addWidget(self.code_text, 6)
 
-    def update_class_lst(self):
-        class_lst = [x['name'] for x in self.class_lst]
-        self.set_list_view(self.class_lst_w, class_lst)
+    def set_list_view(self, lst_view: QListWidget, lst_item):
+        lst_view.clear()
+        i = QtWidgets.QListWidgetItem('.', lst_view)
+        for item in lst_item:
+            i = QtWidgets.QListWidgetItem(str(item), lst_view)
+        return lst_view
 
-    def update_func_lst(self):
-        func_lst = [x['name'] for x in self.func_lst]
-        self.set_list_view(self.func_lst_w, func_lst)
+    def update(self, data):
+        if 'class_lst' in data:
+            self.set_list_view(self.class_lst_w, data['class_lst'])
 
-    def update_code(self):
-        code = get_code(self.file_lst_w.currentItem().text())
-        self.code_lines = code.split('\n')
-        self.code_text.setMarkdown('```'+code+'```')
+        if 'func_lst' in data:
+            self.set_list_view(self.func_lst_w, data['func_lst'])
+
+        if 'code' in data:
+            self.code_text.setMarkdown('```\n'+data['code']+'\n```')
 
     def file_changed(self, cur: QListWidgetItem, prev):
-        if self.file_lst_w.currentRow() != 0:
-            self.ast = astparser.get_module_ast(Path(cur.text()))
-            self.class_lst = astparser.filter_nodes(self.ast, 'class')
-            self.func_lst = astparser.filter_nodes(self.ast, 'function')
-
-            self.update_class_lst()
-            self.update_func_lst()
-            self.update_code()
+        data = symbol_tree.set_active_file(cur.text())
+        self.update(data)
 
     def class_changed(self, cur: QListWidgetItem, prev):
-        pass
+        data = symbol_tree.set_active_class(self.class_lst_w.currentRow())
+        self.update(data)
 
     def func_changed(self, cur: QListWidgetItem, prev):
-        cur_idx = self.func_lst_w.currentRow()
-        # print(self.func_lst, ))
-        if cur_idx == 0:
-            return 
-        else:
-            cur_idx -= 1
-            func = self.func_lst[cur_idx]
-            print(func)
-            print(self.code_lines)
-            start = func['lineno']
-            end = func['end_lineno'] + 1
-            code = '\n'.join(self.code_lines[start - 1 : end])
-            print('*'*80)
-            print(code)
-            print('*'*80)
-            print('```\n '+code+'\n ```')
-            self.code_text.setMarkdown('```\n '+code+'\n ```')
-            print(self.code_text.toMarkdown())
+        data = symbol_tree.set_active_func(self.func_lst_w.currentRow())
+        self.update(data)
 
     @QtCore.Slot()
     def magic(self):

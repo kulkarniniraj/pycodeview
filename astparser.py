@@ -1,8 +1,9 @@
 import ast
 from pathlib import Path
 import json
+from typing import List
 
-def get_file_list(root = Path('.')):
+def get_file_list(root = Path('.')) -> List[Path]:
     files = sorted(root.glob('**/*.py'))
     print(files)
     return files 
