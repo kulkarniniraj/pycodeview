@@ -3,9 +3,13 @@ import random
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtWidgets import QListWidget, QListWidgetItem
 from pathlib import Path
+from pygments import highlight
+from pygments.lexers import PythonLexer
+from pygments.formatters import HtmlFormatter
 
 import astparser
 import symbol_tree
+import syntax
 
 class MyWidget(QtWidgets.QWidget):
     def __init__(self, root):
@@ -31,12 +35,15 @@ class MyWidget(QtWidgets.QWidget):
         self.hbox.addWidget(self.func_lst_w)
 
         # search bar and code viewer
+        # self.code_text = QtWidgets.QTextEdit('')
         self.code_text = QtWidgets.QTextEdit('')
 
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.addLayout(self.hbox, 4)
         self.layout.addWidget(QtWidgets.QLineEdit(placeholderText = 'Search Term'), 2)
         self.layout.addWidget(self.code_text, 6)
+
+        # self.highlight = syntax.PythonHighlighter(self.code_text)
 
     def set_list_view(self, lst_view: QListWidget, lst_item):
         lst_view.clear()
@@ -53,7 +60,9 @@ class MyWidget(QtWidgets.QWidget):
             self.set_list_view(self.func_lst_w, data['func_lst'])
 
         if 'code' in data:
-            self.code_text.setMarkdown('```\n'+data['code']+'\n```')
+            self.code_text.setHtml(highlight(data['code'], PythonLexer(), 
+                                             HtmlFormatter(noclasses=True)))
+            # self.code_text.setMarkdown('```\n'+data['code']+'\n```')
 
     def file_changed(self, cur: QListWidgetItem, prev):
         data = symbol_tree.set_active_file(cur.text())
