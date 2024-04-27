@@ -99,7 +99,14 @@ class MyWidget(QtWidgets.QWidget):
     def magic(self):
         self.text.setText(random.choice(self.hello))
 
+def print_help():
+    print('''Usage: pycodeview ROOTFOLDER
+Loads all python folder in ROOTFOLDER and subfolders and presents Smalltalk IDE like view
+''')
 if __name__ == "__main__":
+    if (len(sys.argv) != 2) or (sys.argv[1] == '-h') or (sys.argv[1] == '--help'):
+        print_help()
+        sys.exit(0)
     app = QtWidgets.QApplication([])
     fnt = app.font()
     fnt.setPointSize(16)
